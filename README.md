@@ -1,5 +1,7 @@
 # StockNaira - Inventory & POS Manager
 
+![](./Overview.png)
+
 > **A responsive, modern inventory and Point-of-Sale (POS) management dashboard tailored for Nigerian retail business owners and commercial market hubs.**
 
 ---
@@ -31,7 +33,7 @@ Automated calculation of standard 7.5% Nigerian Value Added Tax (VAT) with clear
 
 ---
 
-## 🎨 UI Layout & Design Architecture (Inspired by Reference UI)
+## 🎨 UI Layout & Design Architecture
 
 StockNaira's visual architecture is inspired by modern cloud-based accounting and project management dashboards, enhanced with Google Stitch design system principles:
 
@@ -96,7 +98,7 @@ StockNaira's visual architecture is inspired by modern cloud-based accounting an
 
 ```bash
 # Clone the repository
-git clone <repo-url>
+git clone https://github.com/ChijiokeUhegwu/StockNaira.git
 cd StockNaira
 
 # Install dependencies
