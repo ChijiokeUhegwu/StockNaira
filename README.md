@@ -58,6 +58,13 @@ StockNaira's visual architecture is inspired by modern cloud-based accounting an
    - **Pending Transfers Tab (03):** Session ID lookup, sender bank identification, auto-webhook matcher, and fraud rejection buttons.
    - **Suppliers & Reorders Tab (04):** Lead times, outstanding trade credit, and direct WhatsApp links to Lagos distributors.
 
+5. **Dedicated Store Settings & Multi-Channel Configuration:**
+   - **Business Profile:** Registered merchant name, CAC registration (`RC-1849204`), Federal TIN (`23849102-0001`), Balogun Market physical address, and branch linkages.
+   - **Payment & NIP Webhook Hub:** Configured merchant receiving bank accounts (Moniepoint, OPay, GTBank, Zenith, Kuda), NIP live gateway switch, webhook endpoint/secret key management, and instant webhook test simulator.
+   - **Tax, VAT & Thermal Receipt Engine:** 7.5% Nigerian statutory VAT rules, exclusive/inclusive pricing modes, and live 80mm thermal receipt preview updating dynamically.
+   - **Low Stock Threshold Controls:** Interactive sliders for global safety inventory triggers (`≤ 5 units`) and category-specific safety buffers.
+   - **Team & Staff Access Matrix:** Cashier 4-digit POS PIN management, manager discount/refund overrides, and granular operational permissions.
+
 ---
 
 ## 🛠️ Tech Stack & Google Stitch MCP Integration

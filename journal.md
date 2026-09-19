@@ -66,3 +66,61 @@ Initiated development of **StockNaira - Inventory & POS Manager**, an inventory 
 - Build successfully compiled with Vite (`npm run build`).
 - Documentation complete (`README.md`, `DESIGN.md`, `journal.md`).
 - Version control commits created with clear, descriptive commit messages.
+
+---
+
+## 2026-09-19 - Dedicated Store Settings View & Multi-Channel Configuration
+
+### Overview
+Replaced default dashboard fallback in Store Settings navigation with a dedicated, fully functional, multi-tab **Store Settings & Operations View** (`StoreSettingsView.jsx`). Tailored for Nigerian retail commercial hubs (Balogun Market, Alaba, Computer Village, Trade Fair), allowing merchants to manage business identity, NIP bank webhook gateways, 7.5% VAT fiscal rules, safety inventory thresholds, and staff access roles.
+
+### Implemented Features & Components:
+1. **Business Profile & Corporate Identity (`profile` Tab)**:
+   - Form fields for Official Store Name (*Okonkwo & Sons Ltd*), Trading/Plaza Display Name, CAC Registration Number (`RC-1849204`), and Tax Identification Number (TIN `23849102-0001`).
+   - Physical Market Address configuration (e.g. *Plot 14, Breadfruit Street, Balogun Market, Lagos Island*), phone/WhatsApp contact, official accounts email, state, and country.
+   - Merchant category selector (FMCG Wholesale, Electronics, Auto Parts, Fashion & Ankara, Pharmacy).
+   - High-trust verified commercial account identity card with active branch tags.
+
+2. **Payment & NIP Webhook Configuration (`payment_nip` Tab)**:
+   - Multi-bank merchant account management: Moniepoint MFB (POS Terminal & NIP Settlement default), OPay Digital Services, GTBank Plc, Zenith Bank, and Kuda Bank.
+   - Interactive **"+ Add Bank Account"** modal supporting NUBAN validation, terminal IDs, and primary default assignment.
+   - Live vs Sandbox NIP Instant Gateway toggle with SSL POST Webhook Endpoint URL and HMAC-SHA256 secret key management (with reveal & copy).
+   - Interactive **"Send Test Webhook"** connectivity simulator to verify real-time credit event processing.
+   - Notification preferences: Auto-matching 9-digit NIP session IDs, counter audio chime, and instant WhatsApp alerts.
+
+3. **Tax & VAT Settings & Thermal Receipt Customization (`tax_vat` Tab)**:
+   - Nigerian statutory 7.5% VAT toggle with inclusive/exclusive pricing modes.
+   - Default currency configuration locked to Nigerian Naira (`₦ NGN`).
+   - Receipt customization: Editable top header text, custom bottom disclaimer/return policy, and toggles for printing TIN, cashier name, and NIP session ref.
+   - **Interactive Live 80mm Thermal Receipt Preview**: Renders real-time receipt simulation updating dynamically as merchants edit header text, return policy notes, and tax parameters.
+
+4. **Low Stock Thresholds & Stockout Prevention (`inventory_alerts` Tab)**:
+   - Global low stock alert trigger slider (default `<= 5 units`) and emergency critical stockout alarm slider (default `<= 2 units`).
+   - Department-specific safety rules for Groceries (10 units), Electronics (5 units), Fashion (8 units), and General Goods.
+   - Automated supplier Purchase Order (PO) draft trigger and daily 8:00 AM WhatsApp stockout briefing toggle.
+
+5. **Team & Staff Access Permissions (`team_roles` Tab)**:
+   - Staff member directory with avatars, roles, assigned branches, and 4-digit POS authorization PINs.
+   - Granular permission matrix: POS Checkout access, NIP Transfer Approval, Manager Discount/Price Overrides, Restock PO creation, and Settings Admin.
+   - Interactive **"+ Add Staff Member"** modal with role auto-permission presets.
+   - One-click account active/suspended toggle and deletion safeguards.
+
+6. **State Persistence & Integration (`settingsData.js` & `App.jsx`)**:
+   - `localStorage` synchronization (`stocknaira_store_settings_v1`) with fallback to comprehensive Nigerian merchant presets.
+   - Bi-directional synchronization: Customized receipt header, TIN, and 7.5% VAT settings now directly inform `ReceiptModal.jsx` during POS checkouts.
+   - Top breadcrumb bar with unsaved changes indicator, "Reset Defaults" action, and smooth return-to-dashboard navigation.
+
+### Key Decisions Made:
+- **Local Storage Persistence**: Opted for browser `localStorage` schema with deep merge against default presets to ensure offline resilience and uninterrupted cashier workflows during connectivity drops in busy market hubs.
+- **Dynamic Receipt Sync**: Linked Store Settings tax and profile state directly into the global sales receipt generator so changes to TIN or header immediately reflect on customer printouts.
+- **Micro-interactions & Aesthetics**: Designed according to `taste-design` standards in `DESIGN.md` with pristine card surfaces, subtle borders, high-contrast badges, and tactile button push transitions.
+
+### Challenges Resolved:
+- **Form State Granularity**: Structured modular state handling so updates to nested configuration blocks (e.g., category thresholds, bank accounts, staff permissions) trigger targeted re-renders with zero latency.
+- **Receipt Print Preview Math**: Accurately mapped subtotal, dynamic VAT percentage, and payment channel data in the live preview card.
+
+### Parked Items for Future Iterations:
+- **Direct ESC/POS Bluetooth Hardware Printing**: Web Bluetooth API integration to transmit raw ESC/POS byte streams directly to handheld thermal printers without OS print dialog.
+- **Biometric / Cashier Fingerprint Verification**: WebAuthn biometric approval for high-value manager overrides (discounts > 10% or refunds > ₦50,000).
+- **Automated Open Banking OAuth Flow**: Direct OAuth integration with Nigerian commercial banks for automated live statement sync.
+
