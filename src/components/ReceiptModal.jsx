@@ -12,15 +12,24 @@ import {
 } from 'lucide-react';
 import { formatNaira } from '../utils/formatters';
 
-export default function ReceiptModal({ isOpen, onClose, transaction, store }) {
+export default function ReceiptModal({ isOpen, onClose, transaction, store, storeSettings }) {
   if (!isOpen || !transaction) return null;
 
   const handlePrint = () => {
     window.print();
   };
 
-  const vat = transaction.vat || Math.round(transaction.amount * 0.075);
+  const vatRate = storeSettings?.tax?.vatRate || 7.5;
+  const isVatEnabled = storeSettings?.tax?.enableVat ?? true;
+  const vat = isVatEnabled ? (transaction.vat || Math.round(transaction.amount * (vatRate / 100))) : 0;
   const subtotal = transaction.amount - vat;
+
+  const headerText = storeSettings?.tax?.receiptHeader || 'STOCKNAIRA RETAIL\nOkonkwo & Sons Ltd\nBalogun Market, Lagos';
+  const footerText = storeSettings?.tax?.receiptFooter || 'Thank you for your business! Goods sold in good condition are non-refundable after 3 days.';
+  const tinNumber = storeSettings?.profile?.tinNumber || '2948201-0001';
+  const cacNumber = storeSettings?.profile?.cacNumber || 'RC-1849204';
+  const showTin = storeSettings?.tax?.showTinOnReceipt ?? true;
+  const phone = storeSettings?.profile?.phone || '+234 803 445 9912';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
@@ -56,18 +65,17 @@ export default function ReceiptModal({ isOpen, onClose, transaction, store }) {
           >
             {/* Store Header */}
             <div className="text-center space-y-1 pb-3 border-b border-dashed border-slate-300">
-              <h2 className="text-base font-extrabold tracking-tight text-slate-900 font-sans">
-                STOCKNAIRA RETAIL
+              <h2 className="text-base font-extrabold tracking-tight text-slate-900 font-sans whitespace-pre-line leading-tight">
+                {headerText}
               </h2>
-              <p className="text-[11px] font-semibold text-slate-700 font-sans">
-                {store?.name || 'Balogun Main Branch'}
+              <p className="text-[10px] text-slate-500 font-sans pt-1">
+                Tel: {phone} {showTin ? `• TIN: ${tinNumber}` : ''}
               </p>
-              <p className="text-[10px] text-slate-500 font-sans">
-                {store?.address || 'Plot 14, Breadfruit St, Balogun, Lagos'}
-              </p>
-              <p className="text-[10px] text-slate-500 font-sans">
-                Tel: +234 803 445 9912 • TIN: 2948201-0001
-              </p>
+              {cacNumber && (
+                <p className="text-[9px] text-slate-400 font-mono">
+                  CAC: {cacNumber}
+                </p>
+              )}
             </div>
 
             {/* Receipt Metadata */}
@@ -114,7 +122,7 @@ export default function ReceiptModal({ isOpen, onClose, transaction, store }) {
                 <span>{formatNaira(subtotal)}</span>
               </div>
               <div className="flex justify-between text-slate-600">
-                <span>VAT (7.5% Standard):</span>
+                <span>VAT ({isVatEnabled ? `${vatRate}% Standard` : 'Exempt / 0%'}):</span>
                 <span>{formatNaira(vat)}</span>
               </div>
               <div className="flex justify-between text-sm font-extrabold text-slate-900 pt-1 border-t border-slate-200">
@@ -148,8 +156,8 @@ export default function ReceiptModal({ isOpen, onClose, transaction, store }) {
               <div className="flex items-center justify-center gap-1 font-mono tracking-widest text-[9px] text-slate-400">
                 ||| | |||| || ||||| ||| |||| |||||
               </div>
-              <p className="text-[10px] text-slate-500 font-sans">
-                Thank you for your business! No refunds without receipt.
+              <p className="text-[10px] text-slate-500 font-sans whitespace-pre-line leading-relaxed">
+                {footerText}
               </p>
               <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-[9px] font-sans font-bold">
                 <ShieldCheck className="w-3 h-3 text-emerald-600" />

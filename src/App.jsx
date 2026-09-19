@@ -5,6 +5,7 @@ import MetricCards from './components/MetricCards';
 import DailySalesChart from './components/DailySalesChart';
 import InventoryDonutChart from './components/InventoryDonutChart';
 import DataTableSection from './components/DataTableSection';
+import StoreSettingsView from './components/StoreSettingsView';
 import POSModal from './components/POSModal';
 import ConfirmTransferModal from './components/ConfirmTransferModal';
 import ReceiptModal from './components/ReceiptModal';
@@ -19,6 +20,7 @@ import {
   INITIAL_PENDING_TRANSFERS,
   INITIAL_SUPPLIERS
 } from './data/mockData';
+import { loadStoreSettings, saveStoreSettings } from './data/settingsData';
 
 export default function App() {
   // Navigation & Store state
@@ -26,6 +28,9 @@ export default function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [currentStore, setCurrentStore] = useState(INITIAL_STORES[0]);
   const [dateRange, setDateRange] = useState('Sep 1, 2026 - Sep 7, 2026 (7 days active)');
+
+  // Store Settings state (persisted to localStorage)
+  const [storeSettings, setStoreSettings] = useState(() => loadStoreSettings());
 
   // Data states
   const [metrics, setMetrics] = useState(INITIAL_METRICS);
@@ -52,6 +57,11 @@ export default function App() {
   };
 
   // Handlers
+  const handleSaveStoreSettings = (newSettings) => {
+    setStoreSettings(newSettings);
+    saveStoreSettings(newSettings);
+  };
+
   const handleCompleteSale = (newTxn) => {
     setTransactions([newTxn, ...transactions]);
 
@@ -135,13 +145,16 @@ export default function App() {
             setActiveTab('transfers');
             setIsTransferModalOpen(true);
           }
-          if (menu === 'inventory') setActiveTab('low_stock');
+          if (menu === 'inventory') {
+            setActiveTab('low_stock');
+          }
         }}
         onOpenNewSale={() => setIsPOSOpen(true)}
         pendingTransfersCount={pendingTransfers.length}
         currentStore={currentStore}
         mobileOpen={mobileOpen}
         setMobileOpen={setMobileOpen}
+        storeSettings={storeSettings}
       />
 
       {/* Main Content Area (Offset by 256px on desktop) */}
@@ -159,9 +172,12 @@ export default function App() {
           onOpenConfirmTransfer={() => setIsTransferModalOpen(true)}
           pendingTransfersCount={pendingTransfers.length}
           setMobileOpen={setMobileOpen}
+          activeMenu={activeMenu}
+          setActiveMenu={setActiveMenu}
+          storeSettings={storeSettings}
         />
 
-        {/* Main Dashboard Container */}
+        {/* Main Content Container */}
         <main className="flex-1 p-4 lg:p-8 max-w-[1550px] w-full mx-auto space-y-6">
           {/* Toast Notification Banner */}
           {toastMessage && (
@@ -179,56 +195,70 @@ export default function App() {
             </div>
           )}
 
-          {/* Section 1: Overview Metric Cards (3 Cards matching Reference UI) */}
-          <section aria-label="Key Performance Indicators">
-            <MetricCards
-              metrics={{
-                ...metrics,
-                lowStockCount: lowStockItems.length,
-                pendingTransfersCount: pendingTransfers.length
-              }}
-              onOpenLowStock={() => setActiveTab('low_stock')}
-              onOpenTransfers={() => {
-                setActiveTab('transfers');
-                setIsTransferModalOpen(true);
-              }}
-              onOpenNewSale={() => setIsPOSOpen(true)}
+          {/* Conditional View Rendering: Store Settings View vs Dashboard */}
+          {activeMenu === 'settings' ? (
+            <StoreSettingsView
+              settings={storeSettings}
+              onSaveSettings={handleSaveStoreSettings}
+              onBackToDashboard={() => setActiveMenu('dashboard')}
+              showToast={showToast}
+              currentStore={currentStore}
+              stores={INITIAL_STORES}
             />
-          </section>
+          ) : (
+            <>
+              {/* Section 1: Overview Metric Cards */}
+              <section aria-label="Key Performance Indicators">
+                <MetricCards
+                  metrics={{
+                    ...metrics,
+                    lowStockCount: lowStockItems.length,
+                    pendingTransfersCount: pendingTransfers.length
+                  }}
+                  onOpenLowStock={() => setActiveTab('low_stock')}
+                  onOpenTransfers={() => {
+                    setActiveTab('transfers');
+                    setIsTransferModalOpen(true);
+                  }}
+                  onOpenNewSale={() => setIsPOSOpen(true)}
+                />
+              </section>
 
-          {/* Section 2: Visual Analytics & Charts (65% Dual Line Chart + 35% Donut Chart) */}
-          <section className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6" aria-label="Analytics & Charts">
-            {/* Left 65% width: Daily Sales Trends (Cash vs Transfer) */}
-            <div className="lg:col-span-8 min-h-[340px]">
-              <DailySalesChart data={DAILY_SALES_TRENDS} />
-            </div>
+              {/* Section 2: Visual Analytics & Charts (65% Dual Line Chart + 35% Donut Chart) */}
+              <section className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6" aria-label="Analytics & Charts">
+                {/* Left 65% width: Daily Sales Trends (Cash vs Transfer) */}
+                <div className="lg:col-span-8 min-h-[340px]">
+                  <DailySalesChart data={DAILY_SALES_TRENDS} />
+                </div>
 
-            {/* Right 35% width: Inventory Breakdown Donut Chart */}
-            <div className="lg:col-span-4 min-h-[340px]">
-              <InventoryDonutChart
-                categories={INVENTORY_CATEGORIES}
-                totalUnits={metrics.totalStockUnits}
-                capacityPercent={metrics.capacityUsedPercent}
-              />
-            </div>
-          </section>
+                {/* Right 35% width: Inventory Breakdown Donut Chart */}
+                <div className="lg:col-span-4 min-h-[340px]">
+                  <InventoryDonutChart
+                    categories={INVENTORY_CATEGORIES}
+                    totalUnits={metrics.totalStockUnits}
+                    capacityPercent={metrics.capacityUsedPercent}
+                  />
+                </div>
+              </section>
 
-          {/* Section 3: Data Table with Tab Navigation */}
-          <section aria-label="Operational Data Ledger">
-            <DataTableSection
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              transactions={transactions}
-              lowStockItems={lowStockItems}
-              pendingTransfers={pendingTransfers}
-              suppliers={suppliers}
-              onViewReceipt={(txn) => setReceiptTxn(txn)}
-              onQuickRestock={(item) => setRestockItem(item)}
-              onApproveTransfer={(orderId, trfId) => handleApproveTransfer(orderId, trfId)}
-              onRejectTransfer={(trfId) => handleRejectTransfer(trfId)}
-              onOpenNewSale={() => setIsPOSOpen(true)}
-            />
-          </section>
+              {/* Section 3: Data Table with Tab Navigation */}
+              <section aria-label="Operational Data Ledger">
+                <DataTableSection
+                  activeTab={activeTab}
+                  setActiveTab={setActiveTab}
+                  transactions={transactions}
+                  lowStockItems={lowStockItems}
+                  pendingTransfers={pendingTransfers}
+                  suppliers={suppliers}
+                  onViewReceipt={(txn) => setReceiptTxn(txn)}
+                  onQuickRestock={(item) => setRestockItem(item)}
+                  onApproveTransfer={(orderId, trfId) => handleApproveTransfer(orderId, trfId)}
+                  onRejectTransfer={(trfId) => handleRejectTransfer(trfId)}
+                  onOpenNewSale={() => setIsPOSOpen(true)}
+                />
+              </section>
+            </>
+          )}
         </main>
       </div>
 
@@ -256,6 +286,7 @@ export default function App() {
         onClose={() => setReceiptTxn(null)}
         transaction={receiptTxn}
         store={currentStore}
+        storeSettings={storeSettings}
       />
 
       <RestockModal

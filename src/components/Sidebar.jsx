@@ -26,7 +26,8 @@ export default function Sidebar({
   pendingTransfersCount = 3,
   currentStore,
   mobileOpen,
-  setMobileOpen
+  setMobileOpen,
+  storeSettings
 }) {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -45,10 +46,10 @@ export default function Sidebar({
   ];
 
   const favorites = [
-    { id: 'fav-1', name: 'Balogun Main Shop', icon: Building2, color: 'text-emerald-600' },
-    { id: 'fav-2', name: 'Alaba Warehouse B', icon: Warehouse, color: 'text-blue-600' },
-    { id: 'fav-3', name: 'Daily Reconciliation', icon: FileText, color: 'text-amber-600' },
-    { id: 'fav-4', name: 'Tax / 7.5% VAT Summary', icon: BadgePercent, color: 'text-rose-600' },
+    { id: 'fav-1', name: 'Balogun Main Shop', icon: Building2, color: 'text-emerald-600', action: () => setActiveMenu('dashboard') },
+    { id: 'fav-2', name: 'Alaba Warehouse B', icon: Warehouse, color: 'text-blue-600', action: () => setActiveMenu('dashboard') },
+    { id: 'fav-3', name: 'Daily Reconciliation', icon: FileText, color: 'text-amber-600', action: () => setActiveMenu('dashboard') },
+    { id: 'fav-4', name: 'Tax / 7.5% VAT Summary', icon: BadgePercent, color: 'text-rose-600', action: () => setActiveMenu('settings') },
   ];
 
   return (
@@ -68,17 +69,23 @@ export default function Sidebar({
       >
         {/* Workspace Profile Header (Reference UI top left badge) */}
         <div className="p-4 border-b border-slate-100">
-          <div className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 transition cursor-pointer border border-transparent hover:border-slate-200/60">
+          <div
+            onClick={() => {
+              setActiveMenu('settings');
+              if (window.innerWidth < 1024) setMobileOpen(false);
+            }}
+            className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 transition cursor-pointer border border-transparent hover:border-slate-200/60 group"
+          >
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
-                SN
+                {storeSettings?.profile?.logoInitials || 'SN'}
               </div>
               <div className="min-w-0 text-left">
                 <h2 className="text-sm font-bold text-slate-900 truncate">StockNaira</h2>
-                <p className="text-xs text-slate-500 truncate">Okonkwo & Sons Ltd</p>
+                <p className="text-xs text-slate-500 truncate">{storeSettings?.profile?.storeName || 'Okonkwo & Sons Ltd'}</p>
               </div>
             </div>
-            <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+            <ChevronDown className="w-4 h-4 text-slate-400 group-hover:text-slate-600 shrink-0" />
           </div>
 
           {/* Quick Action Button (Reference UI "+ New project") */}
@@ -94,14 +101,17 @@ export default function Sidebar({
         {/* Quick Utility Links (Search, Settings, Inbox) */}
         <div className="px-4 py-2 space-y-0.5 border-b border-slate-100">
           <button
-            onClick={() => setActiveMenu('search')}
+            onClick={() => setActiveMenu('dashboard')}
             className="w-full flex items-center gap-3 px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition"
           >
             <Search className="w-3.5 h-3.5 text-slate-400" />
             <span>Search Catalog / Orders</span>
           </button>
           <button
-            onClick={() => setActiveMenu('inbox')}
+            onClick={() => {
+              setActiveMenu('transfers');
+              if (window.innerWidth < 1024) setMobileOpen(false);
+            }}
             className="w-full flex items-center justify-between px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition"
           >
             <div className="flex items-center gap-3">
@@ -170,7 +180,10 @@ export default function Sidebar({
                 return (
                   <button
                     key={fav.id}
-                    onClick={() => {}}
+                    onClick={() => {
+                      fav.action?.();
+                      if (window.innerWidth < 1024) setMobileOpen(false);
+                    }}
                     className="w-full flex items-center gap-3 px-3 py-2 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition group text-left"
                   >
                     <div className="w-2 h-2 rounded-xs border border-slate-300 group-hover:border-emerald-500 transition shrink-0" />
@@ -185,10 +198,18 @@ export default function Sidebar({
 
         {/* Footer Store Status Indicator */}
         <div className="p-3 border-t border-slate-100 bg-slate-50/50">
-          <div className="flex items-center gap-2 px-2 py-1.5 bg-white border border-slate-200/70 rounded-xl">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+          <div
+            onClick={() => {
+              setActiveMenu('settings');
+              if (window.innerWidth < 1024) setMobileOpen(false);
+            }}
+            className="flex items-center gap-2 px-2 py-1.5 bg-white border border-slate-200/70 rounded-xl hover:border-emerald-300 cursor-pointer transition"
+          >
+            <div className={`w-2 h-2 rounded-full ${storeSettings?.payment?.nipLiveStatus ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'} shrink-0`} />
             <div className="min-w-0 text-left">
-              <p className="text-[11px] font-semibold text-slate-800 truncate">NIP Live Gateway: Active</p>
+              <p className="text-[11px] font-semibold text-slate-800 truncate">
+                NIP Gateway: {storeSettings?.payment?.nipLiveStatus ? 'Active' : 'Sandbox'}
+              </p>
               <p className="text-[10px] text-slate-400 truncate">{currentStore.name}</p>
             </div>
           </div>
