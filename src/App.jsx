@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import MetricCards from './components/MetricCards';
@@ -6,6 +6,8 @@ import DailySalesChart from './components/DailySalesChart';
 import InventoryDonutChart from './components/InventoryDonutChart';
 import DataTableSection from './components/DataTableSection';
 import StoreSettingsView from './components/StoreSettingsView';
+import InventoryControlView from './components/InventoryControlView';
+import SalesReportsView from './components/SalesReportsView';
 import POSModal from './components/POSModal';
 import ConfirmTransferModal from './components/ConfirmTransferModal';
 import ReceiptModal from './components/ReceiptModal';
@@ -14,12 +16,16 @@ import {
   INITIAL_STORES,
   INITIAL_METRICS,
   DAILY_SALES_TRENDS,
-  INVENTORY_CATEGORIES,
   INITIAL_TRANSACTIONS,
-  INITIAL_LOW_STOCK_ITEMS,
   INITIAL_PENDING_TRANSFERS,
   INITIAL_SUPPLIERS
 } from './data/mockData';
+import {
+  INITIAL_STOCK_ITEMS,
+  buildCategoryBreakdown,
+  buildLowStockRows,
+  getStockStatus
+} from './data/inventoryData';
 import { loadStoreSettings, saveStoreSettings } from './data/settingsData';
 
 export default function App() {
@@ -35,10 +41,23 @@ export default function App() {
   // Data states
   const [metrics, setMetrics] = useState(INITIAL_METRICS);
   const [transactions, setTransactions] = useState(INITIAL_TRANSACTIONS);
-  const [lowStockItems, setLowStockItems] = useState(INITIAL_LOW_STOCK_ITEMS);
+  const [stockItems, setStockItems] = useState(INITIAL_STOCK_ITEMS);
   const [pendingTransfers, setPendingTransfers] = useState(INITIAL_PENDING_TRANSFERS);
   const [suppliers, setSuppliers] = useState(INITIAL_SUPPLIERS);
   const [activeTab, setActiveTab] = useState('transactions');
+
+  // Derived inventory views (Dashboard low stock tab + donut gauge stay in sync
+  // with the Inventory Control ledger)
+  const lowStockItems = useMemo(() => buildLowStockRows(stockItems), [stockItems]);
+  const inventoryCategories = useMemo(() => buildCategoryBreakdown(stockItems), [stockItems]);
+  const outOfStockCount = useMemo(
+    () => stockItems.filter((item) => getStockStatus(item) === 'Out of Stock').length,
+    [stockItems]
+  );
+  const totalStockUnits = useMemo(
+    () => stockItems.reduce((sum, item) => sum + item.unitsInStock, 0),
+    [stockItems]
+  );
 
   // Modal states
   const [isPOSOpen, setIsPOSOpen] = useState(false);
@@ -104,7 +123,9 @@ export default function App() {
 
     if (target) {
       setTransactions((prev) =>
-        prev.map((txn) => (txn.id === target.orderId ? { ...txn, status: 'Failed' } : txn))
+        prev.map((txn) =>
+          (txn.id === target.orderId ? { ...txn, status: 'Failed' } : txn)
+        )
       );
     }
 
@@ -118,14 +139,10 @@ export default function App() {
   };
 
   const handleConfirmRestock = (itemId, reorderQty) => {
-    setLowStockItems((prev) =>
+    setStockItems((prev) =>
       prev.map((item) =>
         item.id === itemId
-          ? {
-              ...item,
-              inStock: item.inStock + reorderQty,
-              status: item.inStock + reorderQty >= item.minThreshold ? 'Stock OK' : 'Restock Ordered',
-            }
+          ? { ...item, unitsInStock: item.unitsInStock + reorderQty, lastRestocked: 'Just now' }
           : item
       )
     );
@@ -133,22 +150,130 @@ export default function App() {
     showToast(`Purchase order issued! +${reorderQty} units dispatched by supplier.`);
   };
 
+  const handleMenuChange = (menu) => {
+    // POS Checkout and Bank Transfers are action entries: they open their modal
+    // over the dashboard ledger instead of owning a page of their own.
+    if (menu === 'pos') {
+      setActiveMenu('dashboard');
+      setActiveTab('transactions');
+      setIsPOSOpen(true);
+      return;
+    }
+    if (menu === 'transfers') {
+      setActiveMenu('dashboard');
+      setActiveTab('transfers');
+      setIsTransferModalOpen(true);
+      return;
+    }
+    if (menu === 'inventory') {
+      setActiveTab('low_stock');
+    }
+    setActiveMenu(menu);
+  };
+
+  const renderActiveView = () => {
+    switch (activeMenu) {
+      case 'settings':
+        return (
+          <StoreSettingsView
+            settings={storeSettings}
+            onSaveSettings={handleSaveStoreSettings}
+            onBackToDashboard={() => setActiveMenu('dashboard')}
+            showToast={showToast}
+            currentStore={currentStore}
+            stores={INITIAL_STORES}
+          />
+        );
+
+      case 'inventory':
+        return (
+          <InventoryControlView
+            stockItems={stockItems}
+            setStockItems={setStockItems}
+            showToast={showToast}
+            currentStore={currentStore}
+            onQuickRestock={(row) => setRestockItem(row)}
+          />
+        );
+
+      case 'reports':
+        return (
+          <SalesReportsView
+            showToast={showToast}
+            currentStore={currentStore}
+            storeSettings={storeSettings}
+          />
+        );
+
+      case 'customers':
+        return <ParkedView onBackToDashboard={() => setActiveMenu('dashboard')} />;
+
+      default:
+        return (
+          <>
+            {/* Section 1: Overview Metric Cards */}
+            <section aria-label="Key Performance Indicators">
+              <MetricCards
+                metrics={{
+                  ...metrics,
+                  totalStockUnits,
+                  lowStockCount: lowStockItems.length,
+                  criticalStockCount: outOfStockCount,
+                  pendingTransfersCount: pendingTransfers.length
+                }}
+                onOpenLowStock={() => setActiveTab('low_stock')}
+                onOpenTransfers={() => {
+                  setActiveTab('transfers');
+                  setIsTransferModalOpen(true);
+                }}
+                onOpenNewSale={() => setIsPOSOpen(true)}
+              />
+            </section>
+
+            {/* Section 2: Visual Analytics & Charts (65% Dual Line Chart + 35% Donut Chart) */}
+            <section className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6" aria-label="Analytics & Charts">
+              {/* Left 65% width: Daily Sales Trends (Cash vs Transfer) */}
+              <div className="lg:col-span-8 min-h-[340px]">
+                <DailySalesChart data={DAILY_SALES_TRENDS} />
+              </div>
+
+              {/* Right 35% width: Inventory Breakdown Donut Chart */}
+              <div className="lg:col-span-4 min-h-[340px]">
+                <InventoryDonutChart
+                  categories={inventoryCategories}
+                  totalUnits={totalStockUnits}
+                  capacityPercent={metrics.capacityUsedPercent}
+                />
+              </div>
+            </section>
+
+            {/* Section 3: Data Table with Tab Navigation */}
+            <section aria-label="Operational Data Ledger">
+              <DataTableSection
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                transactions={transactions}
+                lowStockItems={lowStockItems}
+                pendingTransfers={pendingTransfers}
+                suppliers={suppliers}
+                onViewReceipt={(txn) => setReceiptTxn(txn)}
+                onQuickRestock={(item) => setRestockItem(item)}
+                onApproveTransfer={(orderId, trfId) => handleApproveTransfer(orderId, trfId)}
+                onRejectTransfer={(trfId) => handleRejectTransfer(trfId)}
+                onOpenNewSale={() => setIsPOSOpen(true)}
+              />
+            </section>
+          </>
+        );
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex font-sans antialiased">
       {/* Left Sidebar */}
       <Sidebar
         activeMenu={activeMenu}
-        setActiveMenu={(menu) => {
-          setActiveMenu(menu);
-          if (menu === 'pos') setIsPOSOpen(true);
-          if (menu === 'transfers') {
-            setActiveTab('transfers');
-            setIsTransferModalOpen(true);
-          }
-          if (menu === 'inventory') {
-            setActiveTab('low_stock');
-          }
-        }}
+        setActiveMenu={handleMenuChange}
         onOpenNewSale={() => setIsPOSOpen(true)}
         pendingTransfersCount={pendingTransfers.length}
         currentStore={currentStore}
@@ -195,70 +320,8 @@ export default function App() {
             </div>
           )}
 
-          {/* Conditional View Rendering: Store Settings View vs Dashboard */}
-          {activeMenu === 'settings' ? (
-            <StoreSettingsView
-              settings={storeSettings}
-              onSaveSettings={handleSaveStoreSettings}
-              onBackToDashboard={() => setActiveMenu('dashboard')}
-              showToast={showToast}
-              currentStore={currentStore}
-              stores={INITIAL_STORES}
-            />
-          ) : (
-            <>
-              {/* Section 1: Overview Metric Cards */}
-              <section aria-label="Key Performance Indicators">
-                <MetricCards
-                  metrics={{
-                    ...metrics,
-                    lowStockCount: lowStockItems.length,
-                    pendingTransfersCount: pendingTransfers.length
-                  }}
-                  onOpenLowStock={() => setActiveTab('low_stock')}
-                  onOpenTransfers={() => {
-                    setActiveTab('transfers');
-                    setIsTransferModalOpen(true);
-                  }}
-                  onOpenNewSale={() => setIsPOSOpen(true)}
-                />
-              </section>
-
-              {/* Section 2: Visual Analytics & Charts (65% Dual Line Chart + 35% Donut Chart) */}
-              <section className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6" aria-label="Analytics & Charts">
-                {/* Left 65% width: Daily Sales Trends (Cash vs Transfer) */}
-                <div className="lg:col-span-8 min-h-[340px]">
-                  <DailySalesChart data={DAILY_SALES_TRENDS} />
-                </div>
-
-                {/* Right 35% width: Inventory Breakdown Donut Chart */}
-                <div className="lg:col-span-4 min-h-[340px]">
-                  <InventoryDonutChart
-                    categories={INVENTORY_CATEGORIES}
-                    totalUnits={metrics.totalStockUnits}
-                    capacityPercent={metrics.capacityUsedPercent}
-                  />
-                </div>
-              </section>
-
-              {/* Section 3: Data Table with Tab Navigation */}
-              <section aria-label="Operational Data Ledger">
-                <DataTableSection
-                  activeTab={activeTab}
-                  setActiveTab={setActiveTab}
-                  transactions={transactions}
-                  lowStockItems={lowStockItems}
-                  pendingTransfers={pendingTransfers}
-                  suppliers={suppliers}
-                  onViewReceipt={(txn) => setReceiptTxn(txn)}
-                  onQuickRestock={(item) => setRestockItem(item)}
-                  onApproveTransfer={(orderId, trfId) => handleApproveTransfer(orderId, trfId)}
-                  onRejectTransfer={(trfId) => handleRejectTransfer(trfId)}
-                  onOpenNewSale={() => setIsPOSOpen(true)}
-                />
-              </section>
-            </>
-          )}
+          {/* Conditional View Rendering: one dedicated view per sidebar item */}
+          {renderActiveView()}
         </main>
       </div>
 
@@ -295,6 +358,25 @@ export default function App() {
         item={restockItem}
         onConfirmRestock={handleConfirmRestock}
       />
+    </div>
+  );
+}
+
+function ParkedView({ onBackToDashboard }) {
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-10 text-center space-y-3 animate-in fade-in duration-200">
+      <h2 className="text-lg font-bold text-slate-900">Customers &amp; Credit Ledger</h2>
+      <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+        This module is parked for a later iteration. Trade credit ledgers, customer running
+        balances, and WhatsApp repayment reminders are scoped but not yet implemented.
+      </p>
+      <button
+        type="button"
+        onClick={onBackToDashboard}
+        className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition shadow-sm"
+      >
+        Back to Dashboard
+      </button>
     </div>
   );
 }

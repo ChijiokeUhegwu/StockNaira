@@ -37,6 +37,16 @@ export default function Header({
     { label: 'Quarter 3 (Q3 2026)', value: 'Q3 2026' }
   ];
 
+  // Per-page title so every sidebar item renders its own workspace identity
+  const pageMeta = {
+    dashboard: { title: 'Inventory & POS Manager', context: 'Branch overview' },
+    inventory: { title: 'Inventory Control', context: 'Stock ledger & reorder cycles' },
+    reports: { title: 'Sales Reports', context: 'Revenue, VAT & channel analytics' },
+    customers: { title: 'Customers & Credit', context: 'Trade credit ledger' },
+    settings: { title: 'Store Settings', context: 'Business & payment configuration' }
+  };
+  const meta = pageMeta[activeMenu] || pageMeta.dashboard;
+
   return (
     <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 lg:px-8 py-4 transition-all">
       {/* Top Mobile Bar + Desktop Alignment */}
@@ -131,10 +141,10 @@ export default function Header({
               <span>StockNaira</span>
               <span className="text-slate-300 font-normal">/</span>
               <span className="text-slate-600 font-semibold text-lg lg:text-xl">
-                {activeMenu === 'settings' ? 'Store Settings' : 'Inventory & POS Manager'}
+                {meta.title}
               </span>
             </h1>
-            <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
+            <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-slate-500">
               {activeMenu === 'settings' ? (
                 <>
                   <span className="text-emerald-700 font-semibold flex items-center gap-1">
@@ -145,7 +155,7 @@ export default function Header({
                   <span className="text-slate-300">•</span>
                   <span>NIP Live Gateway: {storeSettings?.payment?.nipLiveStatus ? 'Active' : 'Sandbox'}</span>
                 </>
-              ) : (
+              ) : activeMenu === 'dashboard' ? (
                 <>
                   {/* Date Selector Dropdown */}
                   <div className="relative inline-block">
@@ -187,6 +197,12 @@ export default function Header({
                   </div>
                   <span className="text-slate-300">•</span>
                   <span className="text-slate-500 font-normal">7 days active</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-slate-600 font-medium">{meta.context}</span>
+                  <span className="text-slate-300">•</span>
+                  <span className="text-slate-500 font-normal">{currentStore.name}</span>
                 </>
               )}
             </div>

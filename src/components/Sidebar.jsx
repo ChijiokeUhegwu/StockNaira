@@ -46,10 +46,10 @@ export default function Sidebar({
   ];
 
   const favorites = [
-    { id: 'fav-1', name: 'Balogun Main Shop', icon: Building2, color: 'text-emerald-600', action: () => setActiveMenu('dashboard') },
-    { id: 'fav-2', name: 'Alaba Warehouse B', icon: Warehouse, color: 'text-blue-600', action: () => setActiveMenu('dashboard') },
-    { id: 'fav-3', name: 'Daily Reconciliation', icon: FileText, color: 'text-amber-600', action: () => setActiveMenu('dashboard') },
-    { id: 'fav-4', name: 'Tax / 7.5% VAT Summary', icon: BadgePercent, color: 'text-rose-600', action: () => setActiveMenu('settings') },
+    { id: 'fav-1', name: 'Balogun Main Shop', icon: Building2, color: 'text-emerald-600', menu: 'dashboard' },
+    { id: 'fav-2', name: 'Alaba Warehouse B', icon: Warehouse, color: 'text-blue-600', menu: 'inventory' },
+    { id: 'fav-3', name: 'Daily Reconciliation', icon: FileText, color: 'text-amber-600', menu: 'reports' },
+    { id: 'fav-4', name: 'Tax / 7.5% VAT Summary', icon: BadgePercent, color: 'text-rose-600', menu: 'settings' },
   ];
 
   return (
@@ -181,7 +181,7 @@ export default function Sidebar({
                   <button
                     key={fav.id}
                     onClick={() => {
-                      fav.action?.();
+                      setActiveMenu(fav.menu);
                       if (window.innerWidth < 1024) setMobileOpen(false);
                     }}
                     className="w-full flex items-center gap-3 px-3 py-2 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition group text-left"
