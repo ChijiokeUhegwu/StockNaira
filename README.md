@@ -45,7 +45,7 @@ StockNaira's visual architecture is inspired by modern cloud-based accounting an
 
 2. **3 Key Metric Overview Cards:**
    - **Total Sales Today (₦245,800):** +14.2% daily growth, detailing the breakdown of physical Cash (₦95,000) vs Bank Transfer & POS (₦150,800).
-   - **Low Stock Alerts (8 Items):** Highlights 3 critical items below safety thresholds.
+   - **Low Stock Alerts (12 Items):** Highlights 3 critical items at zero stock and 9 further SKUs at or below their reorder point.
    - **Pending Transfer Confirmations (3 Pending):** Real-time monitoring of ₦42,500 unverified bank transfers.
 
 3. **Visual Analytics & Charts:**
@@ -54,16 +54,35 @@ StockNaira's visual architecture is inspired by modern cloud-based accounting an
 
 4. **Tabbed Data Ledger:**
    - **Recent Transactions Tab (24):** Complete ledger with customer names, purchased items, formatted Naira amounts (`₦`), payment badges (Cash, POS, Transfer, Split), and receipt printing.
-   - **Low Stock Items Tab (08):** Stock level visual bars, minimum reorder thresholds, unit costs, and instant PO generation.
+   - **Low Stock Items Tab (12):** Stock level visual bars, minimum reorder thresholds, unit costs, and instant PO generation (derived from the shared stock ledger, not a static mock).
    - **Pending Transfers Tab (03):** Session ID lookup, sender bank identification, auto-webhook matcher, and fraud rejection buttons.
    - **Suppliers & Reorders Tab (04):** Lead times, outstanding trade credit, and direct WhatsApp links to Lagos distributors.
 
-5. **Dedicated Store Settings & Multi-Channel Configuration:**
+5. **Dedicated Inventory Control View (own sidebar route):**
+   - **Searchable Product Ledger:** Sortable table of 34 wholesale SKUs with SKU, Item Name, Category, Stock Level (with in-cell fill bar), Reorder Point, Unit Price, Cost Price, and row-level `Edit` (inline editing) / `Restock` actions.
+   - **Stock Status Filters:** All SKUs / Fast Movers / Reorder Needed / Stocked Up / Out of Stock tabs with live counts, plus category and text filters.
+   - **Inventory KPI Widgets:** Total units in stock (`4,820`), stock value at cost, 30-day fast-mover velocity, stockout risk count, and reorder-needed count.
+   - **Add Product:** Validated new-SKU form with auto-generated SKU suffix and numeric guards.
+   - **Batch Restock:** Multi-line purchase order that pre-selects every reorder-needed or stockout SKU, captures PO number, supplier, per-line quantity and unit cost, then posts the whole order to the shared stock ledger in one action.
+   - **Single-Source-of-Truth Ledger (`inventoryData.js`):** Dashboard donut, dashboard low-stock tab, this table, and every restock flow read the same 34-SKU array, so a restock instantly updates all views.
+
+6. **Dedicated Sales Reports View (own sidebar route):**
+   - **Financial Summary Cards:** Gross Sales, VAT Collected (7.5% computed on the exclusive base), Cash vs Digital split, and Average Basket of Sale, each with period-over-period deltas.
+   - **Date Range Filters:** Today, Last 7 Days, This Month, or a Custom window (Sep 1–30, 2026 dataset anchored to the dashboard figures).
+   - **Cash vs POS/Bank Transfer Chart:** Dependency-free grouped SVG bar chart with hover tooltips, Y-axis gridlines, and an inclusive/exclusive VAT toggle.
+   - **Top Selling Products:** Ranked top 10 by units sold with revenue bars and share-of-volume percentages.
+   - **CSV Export:** BOM-prefixed CSV downloads for the trend series and top sellers (opens cleanly in Excel).
+   - **Printable Daily Reconciliation:** Off-screen reconciliation sheet with per-day cash, POS, transfer, and variance totals plus cashier sign-off, printed via `@media print`.
+
+7. **Dedicated Store Settings & Multi-Channel Configuration:**
    - **Business Profile:** Registered merchant name, CAC registration (`RC-1849204`), Federal TIN (`23849102-0001`), Balogun Market physical address, and branch linkages.
    - **Payment & NIP Webhook Hub:** Configured merchant receiving bank accounts (Moniepoint, OPay, GTBank, Zenith, Kuda), NIP live gateway switch, webhook endpoint/secret key management, and instant webhook test simulator.
    - **Tax, VAT & Thermal Receipt Engine:** 7.5% Nigerian statutory VAT rules, exclusive/inclusive pricing modes, and live 80mm thermal receipt preview updating dynamically.
    - **Low Stock Threshold Controls:** Interactive sliders for global safety inventory triggers (`≤ 5 units`) and category-specific safety buffers.
    - **Team & Staff Access Matrix:** Cashier 4-digit POS PIN management, manager discount/refund overrides, and granular operational permissions.
+
+### Navigation Model
+Sidebar items resolve to real workspaces instead of dashboard scroll anchors: `Dashboard`, `Inventory Control`, `Sales Reports`, and `Store Settings` each render a dedicated view (the header title and subtitle update per page). `POS Checkout` and `Bank Transfers` intentionally open as overlay modals on top of the current page so the cashier flow never loses context, and `Customers & Credit` is a parked placeholder.
 
 ---
 
@@ -125,7 +144,9 @@ npm run preview
 
 ## 🧪 Verification & Testing
 
-- ✅ **Build Integrity:** Clean build with Vite (`npm run build`) with zero TypeScript/JSX errors.
+- ✅ **Build Integrity:** Clean build with Vite (`npm run build`) with zero TypeScript/JSX errors (1,868 modules; 465 kB JS / 46 kB CSS).
+- ✅ **View Render Smoke Test:** App (dashboard), Inventory Control, Sales Reports, and Store Settings were server-rendered in isolation to catch runtime errors; all four render cleanly.
+- ✅ **Derived Data Math Check:** Node-verified that the 34-SKU ledger yields 4,820 units / 40-35-25% category split, 12 reorder-or-stockout SKUs, and that each reports date window (Today / Last 7 / This Month / Custom) reconciles VAT, cash, digital, and transaction totals.
 - ✅ **Responsive Viewports:** Verified across Desktop (1440px+), Laptop (1024px), Tablet (768px), and Mobile (375px).
-- ✅ **Thermal Print Receipt:** Tested thermal slip styling via `@media print` CSS.
-- ✅ **Interactive Flows:** Tested New Sale creation, live cart math, mixed cash/transfer split calculation, transfer approval, and supplier restock PO issuance.
+- ✅ **Thermal Print Receipt & Reconciliation:** Tested slip styling and the printable daily reconciliation sheet via `@media print` CSS.
+- ✅ **Interactive Flows:** Tested New Sale creation, live cart math, mixed cash/transfer split calculation, transfer approval, supplier quick restock, multi-SKU batch restock, inline inventory edits, and CSV export.
