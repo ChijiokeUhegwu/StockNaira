@@ -24,6 +24,7 @@ export default function Sidebar({
   setActiveMenu,
   onOpenNewSale,
   pendingTransfersCount = 3,
+  overdueCustomersCount = 0,
   currentStore,
   mobileOpen,
   setMobileOpen,
@@ -34,7 +35,13 @@ export default function Sidebar({
     { id: 'pos', label: 'POS Checkout', icon: ShoppingCart },
     { id: 'inventory', label: 'Inventory Control', icon: Boxes },
     { id: 'reports', label: 'Sales Reports', icon: TrendingUp },
-    { id: 'customers', label: 'Customers & Credit', icon: Users },
+    {
+      id: 'customers',
+      label: 'Customers & Credit',
+      icon: Users,
+      badge: overdueCustomersCount > 0 ? `${overdueCustomersCount} overdue` : null,
+      badgeColor: 'bg-rose-100 text-rose-700 font-semibold border border-rose-200'
+    },
     {
       id: 'transfers',
       label: 'Bank Transfers',

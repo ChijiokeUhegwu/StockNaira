@@ -8,6 +8,7 @@ import DataTableSection from './components/DataTableSection';
 import StoreSettingsView from './components/StoreSettingsView';
 import InventoryControlView from './components/InventoryControlView';
 import SalesReportsView from './components/SalesReportsView';
+import CustomersCreditView from './components/CustomersCreditView';
 import POSModal from './components/POSModal';
 import ConfirmTransferModal from './components/ConfirmTransferModal';
 import ReceiptModal from './components/ReceiptModal';
@@ -27,6 +28,7 @@ import {
   getStockStatus
 } from './data/inventoryData';
 import { loadStoreSettings, saveStoreSettings } from './data/settingsData';
+import { loadCustomersData, saveCustomersData } from './data/customerData';
 
 export default function App() {
   // Navigation & Store state
@@ -44,7 +46,22 @@ export default function App() {
   const [stockItems, setStockItems] = useState(INITIAL_STOCK_ITEMS);
   const [pendingTransfers, setPendingTransfers] = useState(INITIAL_PENDING_TRANSFERS);
   const [suppliers, setSuppliers] = useState(INITIAL_SUPPLIERS);
+  const [customers, setCustomers] = useState(() => loadCustomersData());
   const [activeTab, setActiveTab] = useState('transactions');
+
+  // Customer debt helpers
+  const overdueCustomersCount = useMemo(
+    () => customers.filter((c) => (c.daysOverdue || 0) > 0 && (c.currentBalance || 0) > 0).length,
+    [customers]
+  );
+
+  const handleUpdateCustomers = (updaterOrList) => {
+    setCustomers((prev) => {
+      const next = typeof updaterOrList === 'function' ? updaterOrList(prev) : updaterOrList;
+      saveCustomersData(next);
+      return next;
+    });
+  };
 
   // Derived inventory views (Dashboard low stock tab + donut gauge stay in sync
   // with the Inventory Control ledger)
@@ -206,7 +223,24 @@ export default function App() {
         );
 
       case 'customers':
-        return <ParkedView onBackToDashboard={() => setActiveMenu('dashboard')} />;
+        return (
+          <CustomersCreditView
+            customers={customers}
+            setCustomers={handleUpdateCustomers}
+            showToast={showToast}
+            currentStore={currentStore}
+            storeSettings={storeSettings}
+            onRecordGlobalTransaction={(newTxn) => {
+              setTransactions((prev) => [newTxn, ...prev]);
+              setMetrics((prev) => ({
+                ...prev,
+                totalSalesToday: prev.totalSalesToday + newTxn.amount,
+                cashSales: newTxn.paymentType === 'Cash' ? prev.cashSales + newTxn.amount : prev.cashSales,
+                transferPosSales: newTxn.paymentType !== 'Cash' ? prev.transferPosSales + newTxn.amount : prev.transferPosSales,
+              }));
+            }}
+          />
+        );
 
       default:
         return (
@@ -276,6 +310,7 @@ export default function App() {
         setActiveMenu={handleMenuChange}
         onOpenNewSale={() => setIsPOSOpen(true)}
         pendingTransfersCount={pendingTransfers.length}
+        overdueCustomersCount={overdueCustomersCount}
         currentStore={currentStore}
         mobileOpen={mobileOpen}
         setMobileOpen={setMobileOpen}
@@ -358,25 +393,6 @@ export default function App() {
         item={restockItem}
         onConfirmRestock={handleConfirmRestock}
       />
-    </div>
-  );
-}
-
-function ParkedView({ onBackToDashboard }) {
-  return (
-    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-10 text-center space-y-3 animate-in fade-in duration-200">
-      <h2 className="text-lg font-bold text-slate-900">Customers &amp; Credit Ledger</h2>
-      <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-        This module is parked for a later iteration. Trade credit ledgers, customer running
-        balances, and WhatsApp repayment reminders are scoped but not yet implemented.
-      </p>
-      <button
-        type="button"
-        onClick={onBackToDashboard}
-        className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition shadow-sm"
-      >
-        Back to Dashboard
-      </button>
     </div>
   );
 }
